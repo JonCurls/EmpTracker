@@ -1,6 +1,5 @@
 // The require blah blah
 const inquirer = require("inquirer");
-const fs = require("fs");
 
 const startUp = () => {
   return inquirer.prompt([
@@ -17,6 +16,31 @@ const startUp = () => {
         "Add Department",
         "Quit",
       ],
+    },
+  ]);
+};
+
+const addEmp = () => {
+  return inquirer.prompt([
+    {
+      type: "input",
+      name: "firstName",
+      message: "Would you kindly provide the employee's first name.",
+    },
+    {
+      type: "input",
+      name: "lastName",
+      message: "Would you kindly provide the employee's last name.",
+    },
+    {
+      type: "input",
+      name: "role",
+      message: "Would you kindly provide the employee's role.",
+    },
+    {
+      type: "input",
+      name: "manager",
+      message: "Would you kindly provide the employee's manager.",
     },
   ]);
 };
