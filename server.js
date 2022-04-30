@@ -89,6 +89,10 @@ const addDept = () => {};
 const addRole = () => {};
 
 const addEmp = () => {
+  // db.viewEmps().then(([rows])=> {
+  //   let manager = rows;
+  //   const managerChoice = manager.map(employee.id, employee.firstName, employee.lastName);
+  // })
   return inquirer
     .prompt([
       {
@@ -103,8 +107,26 @@ const addEmp = () => {
       },
     ])
     .then((response) => {
-      let data = [response.firstName, response.lastName];
-      console.log(data);
+      let emp = [response.firstName, response.lastName];
+      let roleSql = `SELECT role.id, role.title FROM role`;
+      db.query(roleSql, (err, res) => {
+        if (err) throw err;
+        let role = res.map(({ id, title }) => ({ name: title, value: id }));
+        inquirer
+          .prompt([
+            {
+              type: "list",
+              name: "role",
+              message: "Would you kindly provide the employee's role:",
+              choices: role,
+            },
+          ])
+          .then((roleResponse) => {
+            let roleRes = roleResponse.role;
+            emp.push(roleRes);
+            console.log(emp);
+          });
+      });
     });
 };
 
