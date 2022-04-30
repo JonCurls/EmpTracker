@@ -13,15 +13,15 @@ const startUp = () => {
       {
         type: "list",
         name: "choice",
-        message: "Would you kindly choose what to do",
+        message: "Would you kindly choose what to do:",
         choices: [
-          "Add Employee",
-          "View All Employees",
-          "Update Employee Role",
-          "View All Roles",
-          "Add Role",
           "View All Departments",
+          "View All Roles",
+          "View All Employees",
           "Add Department",
+          "Add Role",
+          "Add Employee",
+          "Update Employee Role",
           "Quit",
         ],
       },
@@ -51,20 +51,23 @@ const startUp = () => {
           updateRole();
           break;
         case "Quit":
+          process.exit();
           break;
       }
     });
 };
 
 const viewDept = () => {
-  let sql = `SELECT department.* FROM department`;
+  let sql = `SELECT department.depart_name as Department,
+                    department.id as ID
+                    FROM department`;
   db.query(sql, (err, res) => {
     if (err) throw err;
     console.table(res);
     startUp();
   });
 };
-
+//TODO: need to JOIN role.department_id to department.id
 const viewRoles = () => {
   let sql = `SELECT role.* FROM role`;
   db.query(sql, (err, res) => {
@@ -73,10 +76,14 @@ const viewRoles = () => {
     startUp();
   });
 };
-
+//TODO: need to JOIN employee with role
 const viewEmps = () => {
-  let sql = `SELECT employee.* 
-              FROM employee`;
+  let sql = `SELECT employee.id as ID,
+            employee.first_name as First_Name,
+            employee.last_name as Last_Name,
+            employee.role_id as Role,
+            employee.manager_id as Manager
+            FROM employee`;
   db.query(sql, (err, res) => {
     if (err) throw err;
     console.table(res);
@@ -84,9 +91,74 @@ const viewEmps = () => {
   });
 };
 
-const addDept = () => {};
+const addDept = () => {
+  return inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "name",
+        message: "Would you kindly provide the department's name:",
+      },
+    ])
+    .then((depResponse) => {
+      departmentRes = depResponse.name;
+      let departSql = `INSERT INTO department (depart_name)
+                        VALUES (?)`;
+      db.query(departSql, departmentRes, (err, res) => {
+        if (err) throw err;
+        console.log("New department added.");
+        startUp();
+      });
+    });
+};
 
-const addRole = () => {};
+const addRole = () => {
+  return inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "name",
+        message: "Would you kindly provide the role's name:",
+      },
+      {
+        type: "input",
+        name: "salary",
+        message: "Would you kindly provide the role's salary:",
+      },
+    ])
+    .then((addRoleResponse) => {
+      addRoleRes = [addRoleResponse.name, addRoleResponse.salary];
+      let departmentSql = `SELECT * FROM department`;
+      db.query(departmentSql, (err, res) => {
+        if (err) throw err;
+        let department = res.map(({ id, depart_name }) => ({
+          name: depart_name,
+          value: id,
+        }));
+        inquirer
+          .prompt([
+            {
+              type: "list",
+              name: "department",
+              message: "Would you kindly provide the role's department:",
+              choices: department,
+            },
+          ])
+          .then((response) => {
+            deptRes = response.department;
+            addRoleRes.push(deptRes);
+            // console.log(addRoleRes);
+            let roleSql = `INSERT INTO role (title, salary, department_id)
+                      VALUES (?,?,?)`;
+            db.query(roleSql, addRoleRes, (err, res) => {
+              if (err) throw err;
+              console.log("New role added.");
+              startUp();
+            });
+          });
+      });
+    });
+};
 
 const addEmp = () => {
   return inquirer
@@ -94,12 +166,12 @@ const addEmp = () => {
       {
         type: "input",
         name: "firstName",
-        message: "Would you kindly provide the employee's first name.",
+        message: "Would you kindly provide the employee's first name:",
       },
       {
         type: "input",
         name: "lastName",
-        message: "Would you kindly provide the employee's last name.",
+        message: "Would you kindly provide the employee's last name:",
       },
     ])
     .then((response) => {
@@ -113,14 +185,14 @@ const addEmp = () => {
             {
               type: "list",
               name: "role",
-              message: "Would you kindly provide the employee's role: ",
+              message: "Would you kindly provide the employee's role:",
               choices: role,
             },
           ])
           .then((roleResponse) => {
             let roleRes = roleResponse.role;
             emp.push(roleRes);
-            // console.log(emp);
+            console.log(emp);
             let manSql = `SELECT * FROM employee`;
             db.query(manSql, (err, res) => {
               if (err) throw err;
@@ -133,15 +205,21 @@ const addEmp = () => {
                   {
                     type: "list",
                     name: "manager",
-                    message:
-                      "Would you kindly provide the employee's manager: ",
+                    message: "Would you kindly provide the employee's manager:",
                     choices: manager,
                   },
                 ])
                 .then((manResponse) => {
                   let manRes = manResponse.manager;
                   emp.push(manRes);
-                  console.log(emp);
+                  // console.log(emp);
+                  let empSql = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                                VALUES (?, ?, ?, ?)`;
+                  db.query(empSql, emp, (err, res) => {
+                    if (err) throw err;
+                    console.log("New employee added.");
+                    startUp();
+                  });
                 });
             });
           });
@@ -149,7 +227,51 @@ const addEmp = () => {
     });
 };
 
-const updateRole = () => {};
+const updateRole = () => {
+  let empSql = `SELECT * FROM employee`;
+  db.query(empSql, (err, res) => {
+    if (err) throw err;
+    let employee = res.map(({ id, first_name, last_name }) => ({
+      name: first_name + " " + last_name,
+      value: id,
+    }));
+    let roleSql = `SELECT role.id, role.title FROM role`;
+    db.query(roleSql, (err, res) => {
+      if (err) throw err;
+      let role = res.map(({ id, title }) => ({ name: title, value: id }));
+      inquirer
+        .prompt([
+          {
+            type: "list",
+            name: "name",
+            message:
+              "Would you kindly provide the employee you would like to update:",
+            choices: employee,
+          },
+          {
+            type: "list",
+            name: "role",
+            message:
+              "Would you kindly provide the employee you would like to update:",
+            choices: role,
+          },
+        ])
+        .then((upResponse) => {
+          empUpdate = [upResponse.role, upResponse.name];
+          // console.log(empUpdate);
+          let empSql = `UPDATE employee
+                        SET employee.role_id = ?
+                        WHERE employee.id = ?
+                        `;
+          db.query(empSql, empUpdate, (err, res) => {
+            if (err) throw err;
+            console.log("Employee role updated.");
+            startUp();
+          });
+        });
+    });
+  });
+};
 
 // Start server after DB connection
 db.connect((err) => {
