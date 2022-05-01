@@ -7,6 +7,7 @@ const db = require("./config/connection");
 const PORT = process.env.PORT || 3001;
 const app = express();
 
+// Main Menu function
 const startUp = () => {
   return inquirer
     .prompt([
@@ -27,7 +28,6 @@ const startUp = () => {
       },
     ])
     .then((response) => {
-      //   console.log(response.choice);
       switch (response.choice) {
         case "View All Departments":
           viewDept();
@@ -57,6 +57,9 @@ const startUp = () => {
     });
 };
 
+// View Functions
+
+// View all Departments
 const viewDept = () => {
   let sql = `SELECT department.depart_name as Department,
                     department.id as ID
@@ -67,23 +70,37 @@ const viewDept = () => {
     startUp();
   });
 };
-//TODO: need to JOIN role.department_id to department.id
+// View all Roles
 const viewRoles = () => {
-  let sql = `SELECT role.* FROM role`;
+  let sql = `SELECT 
+            role.title AS Title,
+            role.id AS ID,
+            department.depart_name AS Department,
+            role.salary AS Salary
+            FROM role
+            LEFT JOIN department
+            ON role.department_id = department.id`;
   db.query(sql, (err, res) => {
     if (err) throw err;
     console.table(res);
     startUp();
   });
 };
-//TODO: need to JOIN employee with role
+// View all Employees
 const viewEmps = () => {
-  let sql = `SELECT employee.id as ID,
-            employee.first_name as First_Name,
-            employee.last_name as Last_Name,
-            employee.role_id as Role,
-            employee.manager_id as Manager
-            FROM employee`;
+  let sql = `SELECT 
+              e.id AS ID,
+              e.first_name AS 'First Name',
+              e.last_name AS 'Last Name',
+              role.title AS Title,
+              department.depart_name AS Department,
+              role.salary as SALARY,
+              CONCAT(m.first_name,' ',m.last_name) AS Manager
+            FROM employee e
+            JOIN role ON e.role_id = role.id
+            JOIN department ON role.department_id = department.id
+            LEFT JOIN employee m on e.manager_id = m.id
+            `;
   db.query(sql, (err, res) => {
     if (err) throw err;
     console.table(res);
@@ -91,6 +108,9 @@ const viewEmps = () => {
   });
 };
 
+// Add functions
+
+// Add a Department
 const addDept = () => {
   return inquirer
     .prompt([
@@ -111,7 +131,7 @@ const addDept = () => {
       });
     });
 };
-
+// Add a Role
 const addRole = () => {
   return inquirer
     .prompt([
@@ -147,7 +167,6 @@ const addRole = () => {
           .then((response) => {
             deptRes = response.department;
             addRoleRes.push(deptRes);
-            // console.log(addRoleRes);
             let roleSql = `INSERT INTO role (title, salary, department_id)
                       VALUES (?,?,?)`;
             db.query(roleSql, addRoleRes, (err, res) => {
@@ -159,7 +178,7 @@ const addRole = () => {
       });
     });
 };
-
+// Add an Employee
 const addEmp = () => {
   return inquirer
     .prompt([
@@ -180,6 +199,8 @@ const addEmp = () => {
       db.query(roleSql, (err, res) => {
         if (err) throw err;
         let role = res.map(({ id, title }) => ({ name: title, value: id }));
+        let noManager = "No Manager";
+        role.push(noManager);
         inquirer
           .prompt([
             {
@@ -192,7 +213,6 @@ const addEmp = () => {
           .then((roleResponse) => {
             let roleRes = roleResponse.role;
             emp.push(roleRes);
-            console.log(emp);
             let manSql = `SELECT * FROM employee`;
             db.query(manSql, (err, res) => {
               if (err) throw err;
@@ -212,7 +232,6 @@ const addEmp = () => {
                 .then((manResponse) => {
                   let manRes = manResponse.manager;
                   emp.push(manRes);
-                  // console.log(emp);
                   let empSql = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
                                 VALUES (?, ?, ?, ?)`;
                   db.query(empSql, emp, (err, res) => {
@@ -227,6 +246,9 @@ const addEmp = () => {
     });
 };
 
+// Update functions
+
+// Update Employee Role
 const updateRole = () => {
   let empSql = `SELECT * FROM employee`;
   db.query(empSql, (err, res) => {
@@ -258,7 +280,6 @@ const updateRole = () => {
         ])
         .then((upResponse) => {
           empUpdate = [upResponse.role, upResponse.name];
-          // console.log(empUpdate);
           let empSql = `UPDATE employee
                         SET employee.role_id = ?
                         WHERE employee.id = ?
@@ -276,9 +297,8 @@ const updateRole = () => {
 // Start server after DB connection
 db.connect((err) => {
   if (err) throw err;
-  console.log("Database connected.");
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}\n`);
     startUp();
   });
 });
