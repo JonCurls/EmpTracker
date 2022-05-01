@@ -4,7 +4,7 @@
 
 ## **Thumbnail**
 
-![ScreenShot](./Assets/thumbnail.PNG.PNG)
+![ScreenShot](./Assets/thumbnail.PNG)
 
 ## **Description**
 
